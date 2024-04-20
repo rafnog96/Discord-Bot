@@ -131,7 +131,7 @@ client.once("ready", async () => {
 });
 
 function getIndicator(elapsed, bossName) {
-  if (areaBosses["PoI"].includes(bossName)) {
+  if (areaBosses["PoI"].some(boss => boss.bossName === bossName)) {
     if (elapsed >= 90 * MINUTE && elapsed < 180 * MINUTE) return "❕";
     if (elapsed >= 180 * MINUTE && elapsed < 240 * MINUTE) return "❗";
     if (elapsed >= 240 * MINUTE) return "⏰";
@@ -144,7 +144,7 @@ function getIndicator(elapsed, bossName) {
 }
 
 function getButtonStyle(elapsed, bossName) {
-    if (areaBosses["PoI"].includes(bossName)) {
+    if (areaBosses["PoI"].some(boss => boss.bossName === bossName)) {
         if (elapsed >= 240 * MINUTE) return ButtonStyle.Danger
     } else {
         if (elapsed >= 60 * MINUTE) return ButtonStyle.Danger
