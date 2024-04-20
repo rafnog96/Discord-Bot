@@ -220,9 +220,9 @@ client.on("interactionCreate", async (interaction) => {
   const now = new Date();
   lastClickedTimes.set(bossName, now);
 
-  const area = Object.keys(areaBosses).find((area) =>
-    areaBosses[area].includes(bossName)
-  );
+  const area = Object.keys(areaBosses).find(area =>
+    areaBosses[area].some(boss => boss.bossName === bossName)
+);
   const actionRows = createActionRows(areaBosses[area]);
   await interaction.update({ components: actionRows });
 });
