@@ -191,7 +191,7 @@ async function createEntries(channel){
       });
 }
 
-async function startInterval(channel) {
+function startInterval(channel) {
     intervalId = setInterval(async () => {
         Object.entries(areaBosses).forEach(async ([area, bosses]) => {
             const messages = await channel.messages.fetch({ limit: 20 });
@@ -213,18 +213,23 @@ function stopInterval() {
 }
 
 client.on("interactionCreate", async (interaction) => {
-  if (!interaction.isButton()) return;
-  if (interaction.deferred || interaction.replied) return;
+    if (!interaction.isButton()) return;
+    if (interaction.deferred || interaction.replied) return;
 
-  const bossName = interaction.customId.replace(/_/g, " ");
-  const now = new Date();
-  lastClickedTimes.set(bossName, now);
+    const bossName = interaction.customId.replace(/_/g, " ");
+    const now = new Date();
+    lastClickedTimes.set(bossName, now);
 
-  const area = Object.keys(areaBosses).find(area =>
+    const area = Object.keys(areaBosses).find(area =>
     areaBosses[area].some(boss => boss.bossName === bossName)
-);
-  const actionRows = createActionRows(areaBosses[area]);
-  await interaction.update({ components: actionRows });
+    );
+    if (area){
+        stopInterval();
+        const actionRows = createActionRows(areaBosses[area]);
+        await interaction.update({ components: actionRows });
+        const channel = await client.channels.fetch(process.env.DISCORD_CHANNEL);
+        startInterval(channel);
+    }
 });
 
 async function scrapeSite() {
@@ -274,7 +279,7 @@ client.on('messageCreate', async message => {
         const fetched = await message.channel.messages.fetch({ limit: 50 });
         await message.channel.bulkDelete(fetched);
         await createEntries(channel);
-        await startInterval(channel);
+        startInterval(channel);
     }
     if (message.content === '!info' && message.channelId === channel.id) {
         scrapeSite();
