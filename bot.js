@@ -145,21 +145,21 @@ function getIndicator(elapsed, bossName) {
 
 function getButtonStyle(elapsed, bossName) {
     if (areaBosses["PoI"].some(boss => boss.bossName === bossName)) {
-        if (elapsed >= 240 * MINUTE) return ButtonStyle.Danger
+        if (elapsed >= 240 * MINUTE) return ButtonStyle.Danger;
     } else {
-        if (elapsed >= 60 * MINUTE) return ButtonStyle.Danger
+        if (elapsed >= 60 * MINUTE) return ButtonStyle.Danger;
     }
-    return ButtonStyle.Success
+    return ButtonStyle.Success;
 }
 
 function createButton(boss) {
   const elapsed = Date.now() - lastClickedTimes.get(boss.bossName).getTime();
   const indicator = getIndicator(elapsed, boss.bossName);
-  const style = getButtonStyle(elapsed, boss.bossName);
+  const buttonStyle = getButtonStyle(elapsed, boss.bossName);
   return new ButtonBuilder()
     .setCustomId(boss.bossName.replace(/\s+/g, "_"))
     .setLabel(`${boss.bossName} ${boss.chance} ${indicator}`)
-    .setStyle(style);
+    .setStyle(buttonStyle);
 }
 
 function createActionRows(bosses) {
@@ -194,16 +194,16 @@ async function createEntries(channel){
 async function startInterval(channel) {
     intervalId = setInterval(async () => {
         Object.entries(areaBosses).forEach(async ([area, bosses]) => {
-          const actionRows = createActionRows(bosses);
-          const messages = await channel.messages.fetch({ limit: 100 });
-          const areaMessage = messages.find((m) => {
-            return m.embeds?.[0]?.title?.startsWith(`**${area} Bosses**`);
-        });
-          if (areaMessage) {
-            areaMessage.edit({ components: actionRows });
+            const messages = await channel.messages.fetch({ limit: 20 });
+            const areaMessage = messages.find((m) => {
+                return m.embeds?.[0]?.title?.startsWith(`**${area} Bosses**`);
+            });
+            if (areaMessage) {
+                const actionRows = createActionRows(bosses);
+                areaMessage.edit({ components: actionRows });
           }
         });
-      }, MINUTE/2); 
+      }, MINUTE); 
 }
 
 function stopInterval() {
@@ -271,7 +271,7 @@ client.on('messageCreate', async message => {
     if (message.content === '!clear' && message.channelId === channel.id) {
         stopInterval();
         await message.delete();
-        const fetched = await message.channel.messages.fetch({ limit: 100 });
+        const fetched = await message.channel.messages.fetch({ limit: 50 });
         await message.channel.bulkDelete(fetched);
         await createEntries(channel);
         await startInterval(channel);
