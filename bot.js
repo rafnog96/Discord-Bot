@@ -111,7 +111,7 @@ client.once("ready", async () => {
       bosses.forEach((boss) =>{
         if (boss.Bossarea == area.Id){
           var lastCheck = new Date(boss.Last_check);
-          lastCheck.setTime(lastCheck.getTime() + (2 * 60 * 60 * 1000)); 
+          // lastCheck.setTime(lastCheck.getTime() + (2 * 60 * 60 * 1000)); 
           areabosses.push({Id: boss.Id.toString(), bossName: boss.Bossname, searchName: boss.Searchname, chance: boss.Chance ?? "", State: boss.State,  lastCheck: lastCheck, stage: boss.Stage})
         }
       })
