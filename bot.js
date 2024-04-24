@@ -102,7 +102,6 @@ client.once("ready", async () => {
   console.log("The bot is now connected and ready.");
   const channel = await client.channels.fetch(process.env.DISCORD_CHANNEL);
   const localOffset = new Date().getTimezoneOffset() * 60 * 1000;
-  console.log(new Date().getTimezoneOffset());
   try {
     // Fetch data using the fetchData function
     const areas = await fetchData('Areas');
@@ -112,8 +111,7 @@ client.once("ready", async () => {
       bosses.forEach((boss) =>{
         if (boss.Bossarea == area.Id){
           var lastCheck = new Date(boss.Last_check);
-          // IN LOCAL NEED TO BE SET 
-          // lastCheck.setTime(lastCheck.getTime() + (2 * 60 * 60 * 1000)); 
+          lastCheck.setTime(lastCheck.getTime() - localOffset); 
           areabosses.push({Id: boss.Id.toString(), bossName: boss.Bossname, searchName: boss.Searchname, chance: boss.Chance ?? "", State: boss.State,  lastCheck: lastCheck, stage: boss.Stage})
         }
       })
