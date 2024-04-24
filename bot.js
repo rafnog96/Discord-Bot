@@ -221,7 +221,7 @@ function startInterval(channel) {
                 areaMessage.edit({ components: actionRows });
           }
         });
-      }, MINUTE/30); 
+      }, MINUTE/10); 
 }
 
 function stopInterval() {
