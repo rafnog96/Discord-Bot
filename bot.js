@@ -19,103 +19,79 @@ const client = new Client({
   ],
 });
 
+const mysql = require('mysql2');
+process.env.DISCORD_CHANNEL
+// Create a connection pool
+const pool = mysql.createPool({
+  host: process.env.DB_ADDRESS,
+  port: 3306,
+  user: process.env.DB_USER,
+  password: process.env.DB_PASSWORD,
+  database: 's129935_boss-checks',
+  waitForConnections: true,
+  connectionLimit: 10,
+  queueLimit: 0
+});
+
 const MINUTE = 60000;
 
-let areaBosses = {
-    "MWC": [
-      { bossName: "Furyosa", searchName: "Furyosa", chance: "" },
-      { bossName: "Robbers (Checked Board)", searchName: "", chance: "" }
-    ],
-    "Free Account Areas": [
-      { bossName: "Foreman", searchName: "Foreman Kneebiter", chance: "" },
-      { bossName: "Grorlam", searchName: "", chance: "" },
-      { bossName: "The Evil Eye", searchName: "The Evil Eye", chance: "" },
-      { bossName: "Xenia", searchName: "Xenia", chance: "" },
-      { bossName: "Zarabustor", searchName: "Zarabustor", chance: "" },
-      { bossName: "Zevelon", searchName: "Zevelon Duskbringer", chance: "" },
-      { bossName: "Warlord Ruzad", searchName: "Warlord Ruzad", chance: "" },
-      { bossName: "Rukor Zad", searchName: "Rukor Zad", chance: "" },
-      { bossName: "Dharalion", searchName: "Dharalion", chance: "" },
-      { bossName: "Frog Prince", searchName: "The Frog Prince", chance: "" },
-      { bossName: "General Murius", searchName: "General Murius", chance: "" },
-      { bossName: "Yaga", searchName: "Yaga The Crone", chance: "" }
-    ],
-    "PoI": [
-      { bossName: "Countess", searchName: "Countess Sorrow", chance: "" },
-      { bossName: "Hand", searchName: "The Handmaiden", chance: "" },
-      { bossName: "Imp", searchName: "The Imperor", chance: "" },
-      { bossName: "Punish", searchName: "Mr. Punish", chance: "" },
-      { bossName: "Massacre", searchName: "Massacre", chance: "" },
-      { bossName: "Plasmother", searchName: "The Plasmother", chance: "" },
-      { bossName: "Dracola", searchName: "Dracola", chance: "" }
-    ],
-    "Edron, Darama & Port Hope": [
-      { bossName: "Arachir", searchName: "Arachir The Ancient One", chance: "" },
-      { bossName: "Gravelord", searchName: "Gravelord Oshuran", chance: "" },
-      { bossName: "Tzumruh", searchName: "Tzumrah The Dazzler", chance: "" },
-      { bossName: "Captain Jones", searchName: "Captain Jones", chance: "" },
-      { bossName: "Shlorg", searchName: "Shlorg", chance: "" },
-      { bossName: "Big Bad One", searchName: "The Big Bad One", chance: "" },
-      { bossName: "Valor", searchName: "Sir Valorcrest", chance: "" },
-      { bossName: "Trollvier", searchName: "Big Boss Trolliver", chance: "" },
-      { bossName: "Smuggler", searchName: "Smuggler Baron Silvertoe	", chance: "" },
-      { bossName: "Cobrasss", searchName: "High Templar Cobrass", chance: "" },
-      { bossName: "Oodok & Arthom", searchName: "", chance: "" },
-      { bossName: "Welter", searchName: "The Welter", chance: "" },
-      { bossName: "Hairman", searchName: "Hairman The Huge", chance: "" },
-      { bossName: "Old Whopper", searchName: "The Old Whopper", chance: "" }
-    ],
-    "Svar, Liberty Bay & others": [
-      { bossName: "Diblis", searchName: "Diblis The Fair", chance: ""     },
-      { bossName: "Tyrn (LB)", searchName: "", chance: "" },
-      { bossName: "Grandfather", searchName: "Grandfather Tridian", chance: "" },
-      { bossName: "Man In The Cave", searchName: "man in the cave", chance: "" },
-      { bossName: "Ocyakao", searchName: "Ocyakao", chance: "" },
-      { bossName: "Hirintor (Nibelor)", searchName: "", chance: "" },
-      { bossName: "Hirintor (Mines)", searchName: "", chance: "" },
-      { bossName: "Barbaria", searchName: "Barbaria", chance: "" },
-      { bossName: "Zushuka", searchName: "Zushuka", chance: "" },
-      { bossName: "Omrafir", searchName: "Omrafir", chance: "" }
-    ],
-    "Zao": [
-      { bossName: "Flea (NW Cave)", searchName: "", chance: "" },
-      { bossName: "Flea (SW Cave)", searchName: "", chance: "" },
-      { bossName: "Flea (Surface)", searchName: "", chance: "" },
-      { bossName: "Hatebreeder", searchName: "", chance: "" },
-      { bossName: "Flamecaller (Temple)", searchName: "", chance: "" },
-      { bossName: "Flamecaller (Mountain)", searchName: "", chance: "" },
-      { bossName: "Battlemaster Zunzu", searchName: "", chance: "" },
-      { bossName: "Dreadmaw(s)", searchName: "", chance: "" },
-      { bossName: "Voice(s)", searchName: "", chance: "" },
-      { bossName: "All Zao", searchName: "", chance: "" }
-    ],
-    "Rotworms": [
-      { bossName: "Rot Queen (Edron)", searchName: "", chance: "" },
-      { bossName: "Rot Queen (Hellgate)", searchName: "", chance: "" },
-      { bossName: "Rot Queen (LB)", searchName: "", chance: "" },
-      { bossName: "Rot Queen (Dara)", searchName: "", chance: "" },
-      { bossName: "White Pale (Edron)", searchName: "", chance: "" },
-      { bossName: "White Pale (LB)", searchName: "", chance: "" },
-      { bossName: "White Pale (Dara)", searchName: "", chance: "" }
-    ]
-  };
-  
+let areaBosses = {};
+// let areaBosses = {
+//     "MWC": [
+//       { Id: 1, bossName: "Furyosa", searchName: "Furyosa", chance: "" ,stage: "", state: "0"},
+//       { Id: 1, bossName: "Robbers (Checked Board)", searchName: "", chance: "" ,stage: "", state: "0"}
+//     ],
+//   };
 
-const areaColors = {
-  MWC: 0xffd700,
-  "Free Account Areas": 0xffc0cb,
-  PoI: 0xff0000,
-  "Edron, Darama & Port Hope": 0x008000,
-  "Svar, Liberty Bay & others": 0x800080,
-  Zao: 0xffa500,
-  Rotworms: 0x00ffff,
-};
+let killedBosses = [];
+// {bossId: NUMBER, killedTime: DATE.NOW, state: 1 -> kill, 2 -> poof},
+// {}
+let areaColors = {};
+
+let areaNames = {};
 
 function sortByChance(a, b) {
     const trimmedChanceA = parseFloat(a.chance.slice(1, -2)) || 0;
     const trimmedChanceB = parseFloat(b.chance.slice(1, -2)) || 0;
     
     return trimmedChanceB - trimmedChanceA;
+}
+
+async function fetchData(table) {
+  try {
+    // Get a connection from the pool
+    const connection = await pool.promise().getConnection();
+    
+    // Execute the query
+    const [rows, fields] = await connection.execute(`SELECT * FROM ${table}`);
+    
+    // Release the connection back to the pool
+    connection.release();
+    
+    // Return the fetched data
+    return rows;
+  } catch (error) {
+    console.error('Error fetching data:', error);
+    throw error; // Rethrow the error for handling in the caller function
+  }
+}
+
+async function updateCheck(id) {
+  for (const area in areaBosses) {
+      if (areaBosses.hasOwnProperty(area)) {
+          const bosses = areaBosses[area];
+          const bossToUpdate = bosses.find(boss => boss.Id === id);
+          if (bossToUpdate) {
+              const localTimeStamp = Date.now(); // Get the current time in milliseconds
+              bossToUpdate.lastCheck = localTimeStamp;
+              const connection = await pool.promise().getConnection();
+              const boss_id = parseInt(id);
+              await connection.execute(`Update Bosses SET Last_check = CURRENT_TIMESTAMP WHERE id = ${boss_id};`);
+              return true; // Return true if boss is found and chance is updated
+          }
+      }
+  }
+  return false; // Return false if boss with given Id is not found
 }
 
 const lastClickedTimes = new Map();
@@ -125,39 +101,64 @@ let intervalId;
 client.once("ready", async () => {
   console.log("The bot is now connected and ready.");
   const channel = await client.channels.fetch(process.env.DISCORD_CHANNEL);
-
-  createEntries(channel);
-  startInterval(channel);
+  const localOffset = new Date().getTimezoneOffset() * 60 * 1000;
+  try {
+    // Fetch data using the fetchData function
+    const areas = await fetchData('Areas');
+    const bosses = await fetchData('Bosses');
+    areas.forEach((area) =>{
+      let areabosses = [];
+      bosses.forEach((boss) =>{
+        if (boss.Bossarea == area.Id){
+          var lastCheck = new Date(boss.Last_check);
+          lastCheck.setTime(lastCheck.getTime() + (2 * 60 * 60 * 1000)); 
+          areabosses.push({Id: boss.Id.toString(), bossName: boss.Bossname, searchName: boss.Searchname, chance: boss.Chance ?? "", State: boss.State,  lastCheck: lastCheck, stage: boss.Stage})
+        }
+      })
+      areaColors[area.Name] = area.Color;
+      areaNames[area.Id] = area.Name;
+      areaBosses[area.Name] = areabosses;
+    })
+    createEntries(channel);
+    startInterval(channel);
+  } catch (error) {
+    console.error('An error occurred:', error);
+  }
 });
 
-function getIndicator(elapsed, bossName) {
-  if (areaBosses["PoI"].some(boss => boss.bossName === bossName)) {
-    if (elapsed >= 90 * MINUTE && elapsed < 180 * MINUTE) return "❕";
-    if (elapsed >= 180 * MINUTE && elapsed < 240 * MINUTE) return "❗";
-    if (elapsed >= 240 * MINUTE) return "⏰";
+function getIndicator(elapsed, boss) {
+  if (boss.stage == 1) {
+    if (elapsed >= 90 * MINUTE && elapsed < 180 * MINUTE) return {indicator: "❕", buttonStyle: ButtonStyle.Primary};
+    if (elapsed >= 180 * MINUTE && elapsed < 240 * MINUTE) return {indicator: "❗", buttonStyle: ButtonStyle.Primary};
+    if (elapsed >= 240 * MINUTE) return {indicator: "⏰", buttonStyle: ButtonStyle.Danger};;
   } else {
-    if (elapsed >= 20 * MINUTE && elapsed < 40 * MINUTE) return "❕"; // 20 mins to <40 mins
-    if (elapsed >= 40 * MINUTE && elapsed < 60 * MINUTE) return "❗"; // 40 mins to <1 hour
-    if (elapsed >= 60 * MINUTE) return "⏰"; // 1 hour+
+    if (elapsed >= 20 * MINUTE && elapsed < 40 * MINUTE) return {indicator: "❕", buttonStyle: ButtonStyle.Primary}; // 20 mins to <40 mins
+    if (elapsed >= 40 * MINUTE && elapsed < 60 * MINUTE) return {indicator: "❗", buttonStyle: ButtonStyle.Primary}; // 40 mins to <1 hour
+    if (elapsed >= 60 * MINUTE) return {indicator: "⏰", buttonStyle: ButtonStyle.Danger}; // 1 hour+
   }
-  return "";
-}
-
-function getButtonStyle(elapsed, bossName) {
-    if (areaBosses["PoI"].some(boss => boss.bossName === bossName)) {
-        if (elapsed >= 240 * MINUTE) return ButtonStyle.Danger;
-    } else {
-        if (elapsed >= 60 * MINUTE) return ButtonStyle.Danger;
-    }
-    return ButtonStyle.Success;
+  return {indicator: "", buttonStyle: ButtonStyle.Success}
 }
 
 function createButton(boss) {
-  const elapsed = Date.now() - lastClickedTimes.get(boss.bossName).getTime();
-  const indicator = getIndicator(elapsed, boss.bossName);
-  const buttonStyle = getButtonStyle(elapsed, boss.bossName);
+  const localTimeStamp = Date.now(); // Get the current time in milliseconds
+  const elapsed = localTimeStamp - boss.lastCheck;
+  const {indicator, buttonStyle} = getIndicator(elapsed, boss);
+  if (boss.State == 1){
+    return new ButtonBuilder()
+    .setCustomId(boss.Id)
+    .setLabel(`${boss.bossName} ${"☠️"}`)
+    .setStyle(ButtonStyle.Secondary)
+    .setDisabled(true);
+  }
+  else if (boss.State == 2){
+    return new ButtonBuilder()
+    .setCustomId(boss.Id)
+    .setLabel(`${boss.bossName} ${"☁️"}`)
+    .setStyle(ButtonStyle.Secondary)
+    .setDisabled(true);
+  }
   return new ButtonBuilder()
-    .setCustomId(boss.bossName.replace(/\s+/g, "_"))
+    .setCustomId(boss.Id)
     .setLabel(`${boss.bossName} ${boss.chance} ${indicator}`)
     .setStyle(buttonStyle);
 }
@@ -179,16 +180,33 @@ function createActionRows(bosses) {
 }
 
 async function createEntries(channel){
+  const messages = await channel.messages.fetch({ limit: 20 });
+  let iterator = 0;
+  Object.entries(areaBosses).forEach(([area, bosses]) => {
+    messages.find((m) => {
+      const found = m.embeds?.[0]?.title?.startsWith(`**${area} Bosses**`);
+      if (found) {
+        iterator++;
+      }
+      return found;
+    });
+  });
+  if (iterator != Object.keys(areaColors).length){
     Object.entries(areaBosses).forEach(([area, bosses]) => {
-        bosses.forEach((boss) => {
-          lastClickedTimes.set(boss.bossName, new Date()); // Initialize last clicked times
-        });
-        const actionRows = createActionRows(bosses);
-        const embed = new EmbedBuilder()
-          .setColor(areaColors[area])
-          .setTitle(`**${area} Bosses**`);
-        channel.send({ embeds: [embed], components: actionRows });
+      bosses.forEach((boss) => {
+        lastClickedTimes.set(boss.bossName, new Date()); // Initialize last clicked times
       });
+      const actionRows = createActionRows(bosses);
+      let decimalColor = 0;
+      if (areaColors[area]){
+        decimalColor = parseInt(areaColors[area].substring(2), 16);
+      }
+      const embed = new EmbedBuilder()
+        .setColor(decimalColor)
+        .setTitle(`**${area} Bosses**`);
+      channel.send({ embeds: [embed], components: actionRows });
+    });
+  }
 }
 
 function startInterval(channel) {
@@ -203,7 +221,7 @@ function startInterval(channel) {
                 areaMessage.edit({ components: actionRows });
           }
         });
-      }, MINUTE); 
+      }, MINUTE/30); 
 }
 
 function stopInterval() {
@@ -216,12 +234,11 @@ client.on("interactionCreate", async (interaction) => {
     if (!interaction.isButton()) return;
     if (interaction.deferred || interaction.replied) return;
 
-    const bossName = interaction.customId.replace(/_/g, " ");
-    const now = new Date();
-    lastClickedTimes.set(bossName, now);
+    const bossId = interaction.customId;
+    updateCheck(bossId);
 
     const area = Object.keys(areaBosses).find(area =>
-    areaBosses[area].some(boss => boss.bossName === bossName)
+    areaBosses[area].some(boss => boss.Id === bossId)
     );
     if (area){
         stopInterval();
@@ -243,7 +260,7 @@ async function scrapeSite() {
         const tdElements = $(tr).find('td');
         Object.entries(areaBosses).forEach(([area, bosses]) => {
             bosses.forEach((boss) => {
-                if (tdElements.length > 1 && $(tdElements[1]).text().trim() === boss.searchName) {
+                if (boss.searchName && tdElements.length > 1 && $(tdElements[1]).text().trim() === boss.searchName) {
                     const text = $(tdElements[10]).text().trim();
                     if (text.includes("%")) {
                         boss.chance = "[" + text + "]";
@@ -269,10 +286,8 @@ client.on('messageCreate', async message => {
 
     // Split the message into command and arguments
     const args = message.content.slice(prefix.length).trim().split(/ +/);
-    const command = args.shift().toLowerCase();
     const channel = await client.channels.fetch(process.env.DISCORD_CHANNEL);
 
-    // Check if the command is 'ping'
     if (message.content === '!clear' && message.channelId === channel.id) {
         stopInterval();
         await message.delete();
@@ -284,7 +299,12 @@ client.on('messageCreate', async message => {
     if (message.content === '!info' && message.channelId === channel.id) {
         scrapeSite();
     }
-    
+    // await message.delete(); -> will delete message which was sended 
+    // !kill FOrermean -> NOT WORK
+    // !kill Foreman -> Will work
+   // !kill Foreman -> Foreman areaBosses -> state: 1
+   // !poof Foreman -> Foreman areaBosses -> state: 2
+   // !mistake Foreman -> Foreman areaBosses -> state: 0
 });
 
 client.login(process.env.DISCORD_TOKEN);
