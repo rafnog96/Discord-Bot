@@ -36,12 +36,6 @@ const pool = mysql.createPool({
 const MINUTE = 60000;
 
 let areaBosses = {};
-// let areaBosses = {
-//     "MWC": [
-//       { Id: 1, bossName: "Furyosa", searchName: "Furyosa", chance: "" ,stage: "", state: "0"},
-//       { Id: 1, bossName: "Robbers (Checked Board)", searchName: "", chance: "" ,stage: "", state: "0"}
-//     ],
-//   };
 
 let killedBosses = [];
 // {bossId: NUMBER, killedTime: DATE.NOW, state: 1 -> kill, 2 -> poof},
@@ -51,10 +45,13 @@ let areaColors = {};
 let areaNames = {};
 
 function sortByChance(a, b) {
-    const trimmedChanceA = parseFloat(a.chance.slice(1, -2)) || 0;
-    const trimmedChanceB = parseFloat(b.chance.slice(1, -2)) || 0;
-    
-    return trimmedChanceB - trimmedChanceA;
+    // Sort by chance (descending order)
+    if (a.State != 0 || b.State != 0){
+      return a.State - b.State;
+    }
+    const trimmedChanceA = parseFloat(a.chance) || 0;
+    const trimmedChanceB = parseFloat(b.chance) || 0;
+    return  trimmedChanceB - trimmedChanceA;
 }
 
 async function fetchData(table) {
@@ -94,9 +91,83 @@ async function updateCheck(id) {
   return false; // Return false if boss with given Id is not found
 }
 
+async function updateAll() {
+  const connection = await pool.promise().getConnection();
+  Object.entries(areaBosses).forEach(([area, bosses]) => {
+    bosses.forEach(async (boss) => {
+      const boss_id = parseInt(boss.Id);
+      const chance = boss.chance !== '' ? boss.chance : 'NULL';
+      await connection.execute(`UPDATE Bosses SET State = 0, Chance = ${chance} WHERE id = ${boss_id};`);
+      boss.State = 0;
+    });
+  });
+}
+
+async function addKillBoss(bossName, newState){
+  const currentDateTime = new Date();
+  killedBosses.push({bossName: bossName, time:currentDateTime, state: newState});
+  const connection = await pool.promise().getConnection();
+  await connection.execute(`INSERT INTO Boss_killed (boss, killed_time, state) VALUES ('${bossName}',CURRENT_TIMESTAMP,${newState}) ;`);
+  return true; // Return true if boss is found and chance is updated
+}
+
+async function deleteKillBoss(bossName){
+  const index = killedBosses.findIndex(row => row.bossName === bossName);
+  if (index !== -1) killedBosses.splice(index, 1);
+  const connection = await pool.promise().getConnection();
+  await connection.execute(`DELETE FROM Boss_killed WHERE boss = '${bossName}' ;`);
+  return true; // Return true if boss is found and chance is updated
+}
+
+async function updateState(id, newState) {
+  const connection = await pool.promise().getConnection();
+  const boss_id = parseInt(id);
+  await connection.execute(`Update Bosses SET State = ${newState} WHERE id = ${boss_id};`);
+  return true; // Return true if boss is found and chance is updated
+}
+
+function dailySchedule(hour, minute, second, callback) {
+  const now = new Date();
+  const targetTime = new Date();
+  targetTime.setHours(hour, minute, second);
+
+  // If the target time has already passed today, set it for tomorrow
+  if (targetTime <= now) {
+      targetTime.setDate(targetTime.getDate() + 1);
+  }
+
+  const timeUntilNextExecution = targetTime - now;
+
+  setTimeout(() => {
+      callback();
+      // Schedule next execution for the same time tomorrow
+      dailySchedule(hour, minute, second, callback);
+  }, timeUntilNextExecution);
+}
+
+function buildKilledMessage() {
+  let killedMessage = 'Killed: \n';
+  killedBosses.forEach(row => {
+    const bossName = row.bossName;
+    const time = row.time;
+    const hours = time.getHours();
+    const minutes = String(time.getMinutes()).padStart(2, '0');
+    const state = row.state;
+    let messageState = '✅'
+    if (state != 1){
+      messageState = '😶‍🌫️'
+    }
+    // Append information for each row to the message content
+    killedMessage += `${messageState} ${bossName} ${hours}:${minutes}\n`;
+  });
+  return killedMessage;
+}
+
 const lastClickedTimes = new Map();
 
 let intervalId;
+
+let dailyMessage;
 
 client.once("ready", async () => {
   console.log("The bot is now connected and ready.");
@@ -106,6 +177,23 @@ client.once("ready", async () => {
     // Fetch data using the fetchData function
     const areas = await fetchData('Areas');
     const bosses = await fetchData('Bosses');
+    const message = await fetchData('Message');
+    const killed = await fetchData('Boss_killed');
+    killed.forEach((eachKilled) => {
+      killedBosses.push({bossName: eachKilled.boss, time: eachKilled.killed_time, state: eachKilled.state})
+    })
+    dailyMessage = message[0].message_id;
+    killedMessage = buildKilledMessage();
+    if (dailyMessage == ""){
+      const channel = await client.channels.fetch(process.env.DISCORD_MESSAGE_CHANNEL);
+      const message = await channel.send(killedMessage);
+      const connection = await pool.promise().getConnection();
+      await connection.execute(`UPDATE Message SET message_id = ${message.id} WHERE id = 1;`);
+    } else {
+      const channel = await client.channels.fetch(process.env.DISCORD_MESSAGE_CHANNEL);
+      const message = await channel.messages.fetch(dailyMessage);
+      message.edit(killedMessage);
+    }
     areas.forEach((area) =>{
       let areabosses = [];
       bosses.forEach((boss) =>{
@@ -119,8 +207,27 @@ client.once("ready", async () => {
       areaNames[area.Id] = area.Name;
       areaBosses[area.Name] = areabosses;
     })
+    Object.values(areaBosses).forEach(bosses => {
+      bosses.sort(sortByChance);
+    });
     createEntries(channel);
     startInterval(channel);
+    dailySchedule(10,35,0, async () => {
+      await scrapeSite();
+      await updateAll();
+      const connection = await pool.promise().getConnection();
+      await connection.execute('DELETE FROM Boss_killed WHERE killed_time < DATE_SUB(NOW(), INTERVAL 31 HOUR);')
+      const killed = await fetchData('Boss_killed');
+      killedBosses = [];
+      killed.forEach((eachKilled) => {
+        killedBosses.push({bossName: eachKilled.boss, time: eachKilled.killed_time, state: eachKilled.state})
+      })
+      const killedMessage = buildKilledMessage();
+      const channel = await client.channels.fetch(process.env.DISCORD_MESSAGE_CHANNEL);
+      const message = await channel.send(killedMessage);
+      await connection.execute(`UPDATE Message SET message_id = ${message.id} WHERE id = 1;`);
+      // This code will be executed at 12:00:00 PM every day
+    })
   } catch (error) {
     console.error('An error occurred:', error);
   }
@@ -143,6 +250,7 @@ function createButton(boss) {
   const localTimeStamp = Date.now(); // Get the current time in milliseconds
   const elapsed = localTimeStamp - boss.lastCheck;
   const {indicator, buttonStyle} = getIndicator(elapsed, boss);
+  const customChance = boss.chance !== '' ? "[" + boss.chance + "%]" : "";
   if (boss.State == 1){
     return new ButtonBuilder()
     .setCustomId(boss.Id)
@@ -159,7 +267,7 @@ function createButton(boss) {
   }
   return new ButtonBuilder()
     .setCustomId(boss.Id)
-    .setLabel(`${boss.bossName} ${boss.chance} ${indicator}`)
+    .setLabel(`${boss.bossName} ${customChance} ${indicator}`)
     .setStyle(buttonStyle);
 }
 
@@ -211,7 +319,11 @@ async function createEntries(channel){
 
 function startInterval(channel) {
     intervalId = setInterval(async () => {
+        Object.values(areaBosses).forEach(bosses => {
+          bosses.sort(sortByChance);
+      });
         Object.entries(areaBosses).forEach(async ([area, bosses]) => {
+          
             const messages = await channel.messages.fetch({ limit: 20 });
             const areaMessage = messages.find((m) => {
                 return m.embeds?.[0]?.title?.startsWith(`**${area} Bosses**`);
@@ -221,7 +333,7 @@ function startInterval(channel) {
                 areaMessage.edit({ components: actionRows });
           }
         });
-      }, MINUTE/10); 
+      }, MINUTE); 
 }
 
 function stopInterval() {
@@ -252,29 +364,29 @@ client.on("interactionCreate", async (interaction) => {
 async function scrapeSite() {
 	const url = `https://guildstats.eu/bosses?world=Nevia&monsterName=&bossType=3&rook=0`;
 	const { data } = await axios.get(url);
-    const $ = cheerio.load(data);
+  const $ = cheerio.load(data);
 
-    // Find all <tr> elements
-    $('tr').each((index, tr) => {
-        // Find all <td> elements within the current <tr> element
-        const tdElements = $(tr).find('td');
-        Object.entries(areaBosses).forEach(([area, bosses]) => {
-            bosses.forEach((boss) => {
-                if (boss.searchName && tdElements.length > 1 && $(tdElements[1]).text().trim() === boss.searchName) {
-                    const text = $(tdElements[10]).text().trim();
-                    if (text.includes("%")) {
-                        boss.chance = "[" + text + "]";
-                    }
-                    else {
-                        boss.chance = "";
-                    }
-                }
-            });
-        });
-    });
-    Object.values(areaBosses).forEach(bosses => {
-        bosses.sort(sortByChance);
-    });
+  // Find all <tr> elements
+  $('tr').each((index, tr) => {
+      // Find all <td> elements within the current <tr> element
+      const tdElements = $(tr).find('td');
+      Object.entries(areaBosses).forEach(([area, bosses]) => {
+          bosses.forEach((boss) => {
+              if (boss.searchName && tdElements.length > 1 && $(tdElements[1]).text().trim() === boss.searchName) {
+                  const text = $(tdElements[10]).text().trim();
+                  if (text.includes("%")) {
+                      boss.chance = text.slice(0,-1);
+                  }
+                  else {
+                      boss.chance = "";
+                  }
+              }
+          });
+      });
+  });
+  Object.values(areaBosses).forEach(bosses => {
+      bosses.sort(sortByChance);
+  });
 	return
 }
 
@@ -286,25 +398,95 @@ client.on('messageCreate', async message => {
 
     // Split the message into command and arguments
     const args = message.content.slice(prefix.length).trim().split(/ +/);
+    const command = args.shift().toLowerCase();
+    const bossName = args.join(' '); // Assume the rest is the boss name
     const channel = await client.channels.fetch(process.env.DISCORD_CHANNEL);
 
-    if (message.content === '!clear' && message.channelId === channel.id) {
-        stopInterval();
-        await message.delete();
-        const fetched = await message.channel.messages.fetch({ limit: 50 });
-        await message.channel.bulkDelete(fetched);
-        await createEntries(channel);
-        startInterval(channel);
+    if (message.channelId !== channel.id){
+      return
     }
-    if (message.content === '!info' && message.channelId === channel.id) {
-        scrapeSite();
+
+    if (command === 'clear') {
+      stopInterval();
+      await message.delete();
+      const fetched = await message.channel.messages.fetch({ limit: 50 });
+      await message.channel.bulkDelete(fetched);
+      await createEntries(channel);
+      startInterval(channel);
     }
-    // await message.delete(); -> will delete message which was sended 
-    // !kill FOrermean -> NOT WORK
-    // !kill Foreman -> Will work
-   // !kill Foreman -> Foreman areaBosses -> state: 1
-   // !poof Foreman -> Foreman areaBosses -> state: 2
-   // !mistake Foreman -> Foreman areaBosses -> state: 0
+    else if (command === 'info') {
+      await scrapeSite();
+      await updateAll();
+    }
+    else if (command === 'kill' && bossName) {
+      await updateBossState(bossName, 1, message, channel); // Killed
+      Object.values(areaBosses).forEach(bosses => {
+        bosses.sort(sortByChance);
+    });
+    } else if (command === 'poof' && bossName) {
+      await updateBossState(bossName, 2, message, channel); // Poofed
+      Object.values(areaBosses).forEach(bosses => {
+        bosses.sort(sortByChance);
+    });
+    } else if (command === 'mistake' && bossName) {
+      await updateBossState(bossName, 0, message, channel); // Reset to default
+      Object.values(areaBosses).forEach(bosses => {
+        bosses.sort(sortByChance);
+    });
+    }
 });
+
+async function updateBossState(bossName, newState, message, channel) {
+  const area = Object.keys(areaBosses).find(area => 
+      areaBosses[area].some(boss => boss.bossName === bossName)
+  );
+  if (!area) {
+      if (newState == 0){
+        deleteKillBoss(bossName)
+      } else {
+        addKillBoss(bossName, newState);
+      }
+      const nonBossMessage = await message.reply('Not listed boss was killed.');
+      setTimeout(() => {
+        nonBossMessage.delete(); // Delete after 10 seconds
+        message.delete();
+      }, 5000);
+      const killedMessage = buildKilledMessage();
+      const channel_for_notify = await client.channels.fetch(process.env.DISCORD_MESSAGE_CHANNEL);
+      const message_notify = await channel_for_notify.messages.fetch(dailyMessage);
+      message_notify.edit(killedMessage);
+      return;
+  } 
+
+  const bosses = areaBosses[area].map(boss => {
+      if (boss.bossName === bossName) {
+          boss.State = newState;
+          updateState(boss.Id, newState);
+          if (newState == 0){
+            deleteKillBoss(bossName);
+          } else {
+            addKillBoss(bossName, newState);
+          }
+      }
+      return boss;
+  });
+  stopInterval(); // Stop updates while editing
+  const actionRows = createActionRows(bosses);
+  const messages = await channel.messages.fetch({ limit: 100 });
+  const areaMessage = messages.find(m => m.embeds[0]?.title.startsWith(`**${area} Bosses**`));
+  if (areaMessage) {
+      await areaMessage.edit({ components: actionRows });
+  }
+  startInterval(channel); // Restart updates
+  const confirmationMessage = await message.reply(`${bossName} status updated.`);
+  setTimeout(() => {
+    confirmationMessage.delete(); // Delete after 10 seconds
+    message.delete();
+  }, 5000);
+  const killedMessage = buildKilledMessage();
+  const channel_for_notify = await client.channels.fetch(process.env.DISCORD_MESSAGE_CHANNEL);
+  const message_notify = await channel_for_notify.messages.fetch(dailyMessage);
+  message_notify.edit(killedMessage);
+};
 
 client.login(process.env.DISCORD_TOKEN);
