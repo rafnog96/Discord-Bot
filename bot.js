@@ -93,7 +93,7 @@ async function updateCheck(id) {
   return false; // Return false if boss with given Id is not found
 }
 
-async function updateAll() {
+async function updateAll(channel) {
   const connection = await pool.promise().getConnection();
   Object.entries(areaBosses).forEach(([area, bosses]) => {
     bosses.forEach(async (boss) => {
@@ -105,6 +105,18 @@ async function updateAll() {
       boss.State = 0;
     });
   });
+  Object.values(areaBosses).forEach((bosses) => {
+    bosses.sort(sortByChance);
+  });
+  const updatedOrder = areaBosses[area].map((boss) => { return boss });
+  const actionRows = createActionRows(updatedOrder);
+  const messages = await channel.messages.fetch({ limit: 20 });
+  const areaMessage = messages.find((m) =>
+    m.embeds[0]?.title.startsWith(`**${area} Bosses**`)
+  );
+  if (areaMessage) {
+    await areaMessage.edit({ components: actionRows });
+  }
 }
 
 async function addKillBoss(bossName, newState) {
@@ -489,7 +501,7 @@ client.on("messageCreate", async (message) => {
     });
   } else if (command === "daily") {
     console.log("Daily message command");
-    await dailyScheduleFunctions();
+    await dailyScheduleFunctions(channel);
     const nonBossMessage = await message.reply("Daily info updated.");
     setTimeout(() => {
       nonBossMessage.delete(); // Delete after 5 seconds
@@ -564,9 +576,9 @@ async function updateBossState(bossName, newState, message, channel) {
   message_notify.edit(killedMessage);
 }
 
-async function dailyScheduleFunctions() {
+async function dailyScheduleFunctions(channel) {
   await scrapeSite();
-  await updateAll();
+  await updateAll(channel);
   const connection = await pool.promise().getConnection();
   await connection.execute(
     "DELETE FROM Boss_killed WHERE killed_time < ADDDATE(DATE(NOW()), INTERVAL 2 HOUR);"
