@@ -108,15 +108,16 @@ async function updateAll(channel) {
   Object.values(areaBosses).forEach((bosses) => {
     bosses.sort(sortByChance);
   });
-  const updatedOrder = areaBosses[area].map((boss) => { return boss });
-  const actionRows = createActionRows(updatedOrder);
   const messages = await channel.messages.fetch({ limit: 20 });
-  const areaMessage = messages.find((m) =>
-    m.embeds[0]?.title.startsWith(`**${area} Bosses**`)
-  );
-  if (areaMessage) {
-    await areaMessage.edit({ components: actionRows });
-  }
+  Object.entries(areaBosses).forEach(async ([area, bosses]) => {
+    const areaMessage = messages.find((m) => {
+      return m.embeds?.[0]?.title?.startsWith(`**${area} Bosses**`);
+    });
+    if (areaMessage) {
+      const actionRows = createActionRows(bosses);
+      areaMessage.edit({ components: actionRows });
+    }
+  });
 }
 
 async function addKillBoss(bossName, newState) {
