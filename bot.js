@@ -597,7 +597,7 @@ async function dailyScheduleFunctions(channel) {
   const message_channel = await client.channels.fetch(
     process.env.DISCORD_MESSAGE_CHANNEL
   );
-  dailyMessage = await killedMessage.send(killedMessage);
+  dailyMessage = await message_channel.send(killedMessage);
 
   await connection.execute(
     `UPDATE Message SET message_id = ${dailyMessage.id} WHERE id = ${process.env.KILLED_MESSAGE_ID};`
