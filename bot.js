@@ -84,10 +84,6 @@ async function updateCheck(id) {
         const localTimeStamp = Date.now(); // Get the current time in milliseconds
         bossToUpdate.lastCheck = localTimeStamp;
         const connection = await pool.promise().getConnection();
-        const boss_id = parseInt(id);
-        await connection.execute(
-          `Update Bosses SET Last_check = CURRENT_TIMESTAMP WHERE id = ${boss_id};`
-        );
         return true; // Return true if boss is found and chance is updated
       }
     }
