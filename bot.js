@@ -10,7 +10,7 @@ require("dotenv").config();
 
 const axios = require("axios");
 const cheerio = require("cheerio");
-const moment = require('moment');
+const moment = require("moment");
 
 const client = new Client({
   intents: [
@@ -83,7 +83,6 @@ async function updateCheck(id) {
       if (bossToUpdate) {
         const localTimeStamp = Date.now(); // Get the current time in milliseconds
         bossToUpdate.lastCheck = localTimeStamp;
-        const connection = await pool.promise().getConnection();
         return true; // Return true if boss is found and chance is updated
       }
     }
@@ -110,10 +109,10 @@ async function updateAll(channel, connection) {
     const updateQuery = `
       UPDATE Bosses
       SET State = 0,
-          Chance = CASE ${updateCases.join(' ')}
+          Chance = CASE ${updateCases.join(" ")}
           ELSE Chance
           END
-      WHERE id IN (${bossStates.join(', ')});
+      WHERE id IN (${bossStates.join(", ")});
     `;
 
     // Execute the single update query
@@ -121,7 +120,9 @@ async function updateAll(channel, connection) {
   }
 
   for (const boss of bossStates) {
-    const bossToUpdate = Object.values(areaBosses).flat().find(b => parseInt(b.Id) === boss);
+    const bossToUpdate = Object.values(areaBosses)
+      .flat()
+      .find((b) => parseInt(b.Id) === boss);
     if (bossToUpdate) {
       bossToUpdate.State = 0;
     }
@@ -181,14 +182,14 @@ function buildKilledMessage() {
     const bossName = row.bossName;
     const time = row.time;
     const inputTime = moment(time);
-    const addedTime = inputTime.add(2, 'hours');
-    const hours = String(addedTime.hours()).padStart(2, '0');
-    const minutes = String(addedTime.minutes()).padStart(2, '0');
+    const addedTime = inputTime.add(2, "hours");
+    const hours = String(addedTime.hours()).padStart(2, "0");
+    const minutes = String(addedTime.minutes()).padStart(2, "0");
     const state = row.state;
     let messageState = "✅";
     if (state == 2) {
       messageState = "😶‍🌫️";
-    } else if (state == 3){
+    } else if (state == 3) {
       messageState = "🟥";
     }
     // Append information for each row to the message content
@@ -221,7 +222,7 @@ client.once("ready", async () => {
         state: eachKilled.state,
       });
     });
-    dailyMessage = message[process.env.KILLED_MESSAGE_ID-1].message_id;
+    dailyMessage = message[process.env.KILLED_MESSAGE_ID - 1].message_id;
     killedMessage = buildKilledMessage();
     if (dailyMessage == "") {
       const channel = await client.channels.fetch(
@@ -285,42 +286,42 @@ function getIndicator(elapsed, boss) {
     if (elapsed >= 30 * MINUTE && elapsed < 50 * MINUTE)
       return { indicator: "❗", buttonStyle: ButtonStyle.Primary };
     if (elapsed >= 50 * MINUTE)
-      return { indicator: "⏰", buttonStyle: ButtonStyle.Danger }; 
+      return { indicator: "⏰", buttonStyle: ButtonStyle.Danger };
   } else if (boss.stage == 2) {
     if (elapsed >= 60 * MINUTE && elapsed < 120 * MINUTE)
       return { indicator: "❕", buttonStyle: ButtonStyle.Primary };
     if (elapsed >= 120 * MINUTE && elapsed < 200 * MINUTE)
       return { indicator: "❗", buttonStyle: ButtonStyle.Primary };
     if (elapsed >= 200 * MINUTE)
-      return { indicator: "⏰", buttonStyle: ButtonStyle.Danger }; 
+      return { indicator: "⏰", buttonStyle: ButtonStyle.Danger };
   } else if (boss.stage == 3) {
     if (elapsed >= 120 * MINUTE && elapsed < 240 * MINUTE)
       return { indicator: "❕", buttonStyle: ButtonStyle.Primary };
     if (elapsed >= 240 * MINUTE && elapsed < 320 * MINUTE)
       return { indicator: "❗", buttonStyle: ButtonStyle.Primary };
     if (elapsed >= 320 * MINUTE)
-      return { indicator: "⏰", buttonStyle: ButtonStyle.Danger }; 
+      return { indicator: "⏰", buttonStyle: ButtonStyle.Danger };
   } else if (boss.stage == 4) {
     if (elapsed >= 120 * MINUTE && elapsed < 240 * MINUTE)
       return { indicator: "❕", buttonStyle: ButtonStyle.Primary };
     if (elapsed >= 240 * MINUTE && elapsed < 460 * MINUTE)
       return { indicator: "❗", buttonStyle: ButtonStyle.Primary };
     if (elapsed >= 460 * MINUTE)
-      return { indicator: "⏰", buttonStyle: ButtonStyle.Danger }; 
+      return { indicator: "⏰", buttonStyle: ButtonStyle.Danger };
   } else if (boss.stage == 5) {
     if (elapsed >= 240 * MINUTE && elapsed < 480 * MINUTE)
       return { indicator: "❕", buttonStyle: ButtonStyle.Primary };
     if (elapsed >= 480 * MINUTE && elapsed < 720 * MINUTE)
       return { indicator: "❗", buttonStyle: ButtonStyle.Primary };
     if (elapsed >= 720 * MINUTE)
-      return { indicator: "⏰", buttonStyle: ButtonStyle.Danger }; 
+      return { indicator: "⏰", buttonStyle: ButtonStyle.Danger };
   } else {
     if (elapsed >= 20 * MINUTE && elapsed < 40 * MINUTE)
       return { indicator: "❕", buttonStyle: ButtonStyle.Primary };
     if (elapsed >= 40 * MINUTE && elapsed < 60 * MINUTE)
       return { indicator: "❗", buttonStyle: ButtonStyle.Primary };
     if (elapsed >= 60 * MINUTE)
-      return { indicator: "⏰", buttonStyle: ButtonStyle.Danger }; 
+      return { indicator: "⏰", buttonStyle: ButtonStyle.Danger };
   }
   return { indicator: "", buttonStyle: ButtonStyle.Success };
 }
@@ -329,13 +330,18 @@ function createButton(boss) {
   const localTimeStamp = Date.now(); // Get the current time in milliseconds
   const elapsed = localTimeStamp - boss.lastCheck;
   const { indicator, buttonStyle } = getIndicator(elapsed, boss);
-  const customChance = boss.chance !== "" && boss.searchName !== null ? "[" + boss.chance + "%]" : "";
-  if (boss.searchName != null && boss.chance == ''){
+  const customChance =
+    boss.chance === "0.00001"
+      ? ""
+      : boss.chance !== "" && boss.searchName !== null
+      ? `[${boss.chance}%]`
+      : "";
+  if (boss.searchName != null && boss.chance == "") {
     return new ButtonBuilder()
-    .setCustomId(boss.Id)
-    .setLabel(`${boss.bossName}`)
-    .setStyle(ButtonStyle.Secondary)
-    .setDisabled(true)
+      .setCustomId(boss.Id)
+      .setLabel(`${boss.bossName}`)
+      .setStyle(ButtonStyle.Secondary)
+      .setDisabled(true);
   }
   if (boss.State == 1) {
     return new ButtonBuilder()
@@ -349,15 +355,14 @@ function createButton(boss) {
       .setLabel(`${boss.bossName} ${"☁️"}`)
       .setStyle(ButtonStyle.Secondary)
       .setDisabled(true);
-  }
-  else if (boss.State == 3) {
+  } else if (boss.State == 3) {
     return new ButtonBuilder()
       .setCustomId(boss.Id)
       .setLabel(`${boss.bossName} ${"☠️"}`)
       .setStyle(ButtonStyle.Secondary)
       .setDisabled(true);
   }
-  if (indicator != ""){
+  if (indicator != "") {
     return new ButtonBuilder()
       .setCustomId(boss.Id)
       .setLabel(`${boss.bossName} ${customChance}`)
@@ -443,7 +448,7 @@ function startInterval(messages) {
 }
 
 function needsIndicatorUpdate(bosses, currentComponents) {
-  const newIndicators = bosses.map(boss => {
+  const newIndicators = bosses.map((boss) => {
     const { indicator } = getIndicator(Date.now() - boss.lastCheck, boss);
     return indicator;
   });
@@ -453,16 +458,19 @@ function needsIndicatorUpdate(bosses, currentComponents) {
     for (let j = 0; j < currentButtons.length; j++) {
       // Check if the button is disabled
       const label = currentButtons[j].label;
-      if (currentButtons[j].disabled  && !(label.includes("☠️") || label.includes("☁️"))) {
-        continue;  // Skip further checks for this button
+      if (
+        currentButtons[j].disabled &&
+        !(label.includes("☠️") || label.includes("☁️"))
+      ) {
+        continue; // Skip further checks for this button
       }
-      const newIndicator = newIndicators[i * 4 + j];  // Adjust index based on rows
+      const newIndicator = newIndicators[i * 4 + j]; // Adjust index based on rows
       if (!currentButtons[j].label.includes(newIndicator)) {
-        return true;  // Indicator needs update and button is not disabled
+        return true; // Indicator needs update and button is not disabled
       }
     }
   }
-  return false;  // No indicator updates needed, or all buttons needing updates are disabled
+  return false; // No indicator updates needed, or all buttons needing updates are disabled
 }
 
 function stopInterval() {
@@ -474,6 +482,7 @@ function stopInterval() {
 client.on("interactionCreate", async (interaction) => {
   if (!interaction.isButton()) return;
   if (interaction.deferred || interaction.replied) return;
+  if (interaction.channelId !== process.env.DISCORD_CHANNEL) return;
 
   const bossId = interaction.customId;
   updateCheck(bossId);
@@ -482,12 +491,8 @@ client.on("interactionCreate", async (interaction) => {
     areaBosses[area].some((boss) => boss.Id === bossId)
   );
   if (area) {
-    stopInterval();
     const actionRows = createActionRows(areaBosses[area]);
     await interaction.update({ components: actionRows });
-    const channel = await client.channels.fetch(process.env.DISCORD_CHANNEL);
-    const messages = await channel.messages.fetch({ limit: 20 });
-    startInterval(messages);
   }
 });
 
@@ -510,6 +515,8 @@ async function scrapeSite() {
           const text = $(tdElements[10]).text().trim();
           if (text.includes("%")) {
             boss.chance = text.slice(0, -1);
+          } else if (text.includes("Low")) {
+            boss.chance = "0.00001";
           } else {
             boss.chance = "";
           }
@@ -525,10 +532,11 @@ const prefix = "!";
 client.on("messageCreate", async (message) => {
   // Ignore messages from bots and messages that don't start with the prefix
   if (!message.content.startsWith(prefix) || message.author.bot) return;
-  const member = message.member || await message.guild.members.fetch(message.author.id);
+  const member =
+    message.member || (await message.guild.members.fetch(message.author.id));
   if (!member.roles.cache.has(process.env.ADMIN_ROLE)) {
     return;
-}
+  }
   // Split the message into command and arguments
   const args = message.content.slice(prefix.length).trim().split(/ +/);
   const command = args.shift().toLowerCase();
@@ -552,17 +560,22 @@ client.on("messageCreate", async (message) => {
   const timeRegex = /^([01]\d|2[0-3]):([0-5]\d)$/;
   let subtractedTime;
   if (!timeRegex.test(killtime)) {
-    const reply = await message.reply(`The time ${killtime} is not in a valid HH:MM format. Please provide a valid time.`);
+    const reply = await message.reply(
+      `The time ${killtime} is not in a valid HH:MM format. Please provide a valid time.`
+    );
     setTimeout(() => {
-        message.delete();
-        reply.delete();
+      message.delete();
+      reply.delete();
     }, 5000);
     return;
   } else {
     const now = moment();
-    const inputTime = moment(`${now.format('YYYY-MM-DD')} ${killtime}`, 'YYYY-MM-DD HH:mm');
-    subtractedTime = inputTime.subtract(2, 'hours');
-    subtractedTime = subtractedTime.format('YYYY-MM-DD HH:mm:ss');
+    const inputTime = moment(
+      `${now.format("YYYY-MM-DD")} ${killtime}`,
+      "YYYY-MM-DD HH:mm"
+    );
+    subtractedTime = inputTime.subtract(2, "hours");
+    subtractedTime = subtractedTime.format("YYYY-MM-DD HH:mm:ss");
   }
   if (command === "kill" && bossName) {
     console.log("Kill message command");
@@ -592,12 +605,14 @@ client.on("messageCreate", async (message) => {
       bosses.sort(sortByChance);
     });
     return;
-  } 
+  }
 });
 
 async function updateBossState(bossName, newState, message, channel, killtime) {
   const area = Object.keys(areaBosses).find((area) =>
-    areaBosses[area].some(boss => boss.bossName.toLowerCase() === bossName.toLowerCase())
+    areaBosses[area].some(
+      (boss) => boss.bossName.toLowerCase() === bossName.toLowerCase()
+    )
   );
   if (!area) {
     if (newState == 0) {
@@ -636,7 +651,9 @@ async function updateBossState(bossName, newState, message, channel, killtime) {
   Object.values(areaBosses).forEach((bosses) => {
     bosses.sort(sortByChance);
   });
-  const updatedOrder = areaBosses[area].map((boss) => { return boss });
+  const updatedOrder = areaBosses[area].map((boss) => {
+    return boss;
+  });
   const actionRows = createActionRows(updatedOrder);
   const messages = await channel.messages.fetch({ limit: 20 });
   const areaMessage = messages.find((m) =>
@@ -662,15 +679,23 @@ async function updateBossState(bossName, newState, message, channel, killtime) {
 }
 
 async function dailyScheduleFunctions(channel) {
-  
   const connection = await pool.promise().getConnection();
   await connection.execute(
     "DELETE FROM Boss_killed WHERE killed_time < ADDDATE(DATE(NOW()), INTERVAL 2 HOUR);"
   );
-  
+
   const now = new Date();
-  const today = new Date(now.getFullYear(), now.getMonth(), now.getDate(), 2, 0, 0);
-  killedBosses = killedBosses.filter(killed => new Date(killed.time) >= today);
+  const today = new Date(
+    now.getFullYear(),
+    now.getMonth(),
+    now.getDate(),
+    2,
+    0,
+    0
+  );
+  killedBosses = killedBosses.filter(
+    (killed) => new Date(killed.time) >= today
+  );
   const killedMessage = buildKilledMessage();
   const message_channel = await client.channels.fetch(
     process.env.DISCORD_MESSAGE_CHANNEL
