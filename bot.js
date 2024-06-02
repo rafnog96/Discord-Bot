@@ -380,7 +380,7 @@ client.once("ready", async () => {
       }
     });
     intervalMinute.start();
-    let scheduledMessage = new CronJob("00 50 18 * * *", async () => {
+    let scheduledMessage = new CronJob("10 35 08 * * *", async () => {
       console.log("Daily schedule");
       await dailyScheduleFunctions("0000BOT0000");
     });
