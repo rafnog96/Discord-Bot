@@ -246,7 +246,8 @@ function buildLogsMessage(logs) {
   let logsMessage = "";
   logs.forEach((row) => {
     const newTime = moment(row.time);
-    const formattedTime = `${newTime.format("DD-MM-YYYY hh:mm")}`;
+    const addedTime = newTime.add(2, "hours");
+    const formattedTime = `${addedTime.format("DD-MM-YYYY hh:mm")}`;
 
     let bossname = row.bossname;
     for (const area in areaBosses) {
@@ -375,7 +376,7 @@ client.once("ready", async () => {
       }
     });
     intervalMinute.start();
-    let scheduledMessage = new CronJob("10 40 10 * * *", async () => {
+    let scheduledMessage = new CronJob("10 45 10 * * *", async () => {
       console.log("Daily schedule");
       await dailyScheduleFunctions("0000BOT0000");
     });
