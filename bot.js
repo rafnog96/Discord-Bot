@@ -245,13 +245,8 @@ function buildLogsMessage(logs) {
   }
   let logsMessage = "";
   logs.forEach((row) => {
-    const dt = new Date(row.time);
-    const day = String(dt.getUTCDate()).padStart(2, "0");
-    const month = String(dt.getUTCMonth() + 1).padStart(2, "0"); // Months are zero-based
-    const year = dt.getUTCFullYear();
-    const hours = String(dt.getUTCHours()).padStart(2, "0");
-    const minutes = String(dt.getUTCMinutes()).padStart(2, "0");
-    const formattedTime = `${day}-${month}-${year} ${hours}:${minutes}`;
+    const newTime = moment(row.time);
+    const formattedTime = `${newTime.format("DD-MM-YYYY hh:mm")}`;
 
     let bossname = row.bossname;
     for (const area in areaBosses) {
@@ -380,7 +375,7 @@ client.once("ready", async () => {
       }
     });
     intervalMinute.start();
-    let scheduledMessage = new CronJob("10 35 08 * * *", async () => {
+    let scheduledMessage = new CronJob("10 40 10 * * *", async () => {
       console.log("Daily schedule");
       await dailyScheduleFunctions("0000BOT0000");
     });
