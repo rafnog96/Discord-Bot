@@ -595,11 +595,6 @@ const prefix = "!";
 client.on("messageCreate", async (message) => {
   // Ignore messages from bots and messages that don't start with the prefix
   if (!message.content.startsWith(prefix) || message.author.bot) return;
-  const member =
-    message.member || (await message.guild.members.fetch(message.author.id));
-  if (!member.roles.cache.has(process.env.BOSS_HUNTER_ROLE)) {
-    return;
-  }
   // Split the message into command and arguments
   const args = message.content.slice(prefix.length).trim().split(/ +/);
   const command = args.shift().toLowerCase();
@@ -610,17 +605,6 @@ client.on("messageCreate", async (message) => {
   if (message.channelId !== channel.id) {
     return;
   }
-  // Now the schedule works correctly with update info
-  // if (command === "daily") {
-  //   console.log("Daily message command");
-  //   await dailyScheduleFunctions(message.author.id);
-  //   const nonBossMessage = await message.reply("Daily info updated.");
-  //   setTimeout(() => {
-  //     nonBossMessage.delete(); // Delete after 5 seconds
-  //     message.delete();
-  //   }, 5000);
-  //   return;
-  // }
 
   const timeRegex = /^([01]\d|2[0-3]):([0-5]\d)$/;
   let subtractedTime;
