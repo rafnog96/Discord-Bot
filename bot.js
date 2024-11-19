@@ -399,19 +399,24 @@ client.once("ready", async () => {
       const rolesChannel = await client.channels.fetch(
         process.env.DISCORD_ROLES_CHANNEL
       );
-      const rolesPerMessage = 9;
-      for (let i = 0; i < roles.length; i += rolesPerMessage) {
-        const rolesBatch = roles.slice(i, i + rolesPerMessage);
-        const rolesMessage = buildRolesMessage(rolesBatch);
-        const message = await rolesChannel.send(rolesMessage);
-        for (const role of rolesBatch) {
-            try {
-                await message.react(role.img_id); // Use img_id as the emoji
-            } catch (error) {
-                console.error(`Failed to react with emoji ${role.img_id}:`, error);
-            }
+      
+      const fetchedMessages = await rolesChannel.messages.fetch({ limit: 1 });
+
+      if (fetchedMessages.size === 0){
+        const rolesPerMessage = 11;
+        for (let i = 0; i < roles.length; i += rolesPerMessage) {
+          const rolesBatch = roles.slice(i, i + rolesPerMessage);
+          const rolesMessage = buildRolesMessage(rolesBatch);
+          const message = await rolesChannel.send(rolesMessage);
+          for (const role of rolesBatch) {
+              try {
+                  await message.react(role.img_id); // Use img_id as the emoji
+              } catch (error) {
+                  console.error(`Failed to react with emoji ${role.img_id}:`, error);
+              }
+          }
         }
-    }
+      }
   
     } catch (error) {
       console.error("An error occurred:", error);
