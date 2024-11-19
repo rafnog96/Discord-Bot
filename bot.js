@@ -843,7 +843,7 @@ client.on('messageReactionAdd', async (reaction, user) => {
   const member = guild.members.cache.get(user.id);
 
   if (member) {
-    const reaction_id = `<:${reaction.emoji.name}:${reaction.emoji.id}>`;
+    const reaction_id = `<a:${reaction.emoji.name}:${reaction.emoji.id}>`;
     const foundRole = roles.find(role => role.img_id === reaction_id);
     if (!foundRole) return; 
     const role = guild.roles.cache.get(foundRole.role_id);
@@ -867,7 +867,7 @@ client.on('messageReactionRemove', async (reaction, user) => {
   const member = guild.members.cache.get(user.id);
 
   if (member) {
-    const reaction_id = `<:${reaction.emoji.name}:${reaction.emoji.id}>`;
+    const reaction_id = `<a:${reaction.emoji.name}:${reaction.emoji.id}>`;
     const foundRole = roles.find(role => role.img_id === reaction_id);
     if (!foundRole) return; 
     const role = guild.roles.cache.get(foundRole.role_id);
