@@ -400,7 +400,7 @@ client.once("ready", async () => {
         process.env.DISCORD_ROLES_CHANNEL
       );
       const rolesPerMessage = 9;
-      for (let i = 0; i < roles.length; i += rolesPerMessage) {
+      for (let i = 0; i < 9; i += rolesPerMessage) {
         const rolesBatch = roles.slice(i, i + rolesPerMessage);
         const rolesMessage = buildRolesMessage(rolesBatch);
         const message = await rolesChannel.send(rolesMessage);
@@ -844,8 +844,11 @@ client.on('messageReactionAdd', async (reaction, user) => {
 
   if (member) {
     const reaction_id = `<:${reaction.emoji.name}:${reaction.emoji.id}>`;
+    console.log(`Emoji ${reaction.emoji}`);
+    console.log(`Emoji text ${reaction_id}`);
     const foundRole = roles.find(role => role.img_id === reaction_id);
     if (!foundRole) return; 
+    console.log(`Added role to ${foundRole.role_id}`);
     const role = guild.roles.cache.get(foundRole.role_id);
     if (role) {
       try {
@@ -868,8 +871,11 @@ client.on('messageReactionRemove', async (reaction, user) => {
 
   if (member) {
     const reaction_id = `<:${reaction.emoji.name}:${reaction.emoji.id}>`;
+    console.log(`Emoji ${reaction.emoji}`);
+    console.log(`Emoji text ${reaction_id}`);
     const foundRole = roles.find(role => role.img_id === reaction_id);
     if (!foundRole) return; 
+    console.log(`Added role to ${foundRole.role_id}`);
     const role = guild.roles.cache.get(foundRole.role_id);
     if (role) {
       try {
