@@ -400,7 +400,7 @@ client.once("ready", async () => {
         process.env.DISCORD_ROLES_CHANNEL
       );
       const rolesPerMessage = 9;
-      for (let i = 0; i < 9; i += rolesPerMessage) {
+      for (let i = 0; i < roles.length; i += rolesPerMessage) {
         const rolesBatch = roles.slice(i, i + rolesPerMessage);
         const rolesMessage = buildRolesMessage(rolesBatch);
         const message = await rolesChannel.send(rolesMessage);
