@@ -21,6 +21,8 @@ const client = new Client({
     GatewayIntentBits.Guilds,
     GatewayIntentBits.GuildMessages,
     GatewayIntentBits.MessageContent,
+    GatewayIntentBits.GuildMessageReactions,
+    GatewayIntentBits.GuildMembers,
   ],
 });
 
@@ -41,6 +43,8 @@ let areaBosses = {};
 
 let killedBosses = [];
 // {bossId: NUMBER, killedTime: DATE.NOW, state: 1 -> kill, 2 -> poof},
+
+let roles = [];
 
 let areaColors = {};
 
@@ -263,6 +267,15 @@ function buildLogsMessage(logs) {
   return logsMessage;
 }
 
+function buildRolesMessage(roles) {
+  let rolesMessage = "Names: \n";
+  roles.forEach((row) => {
+    // Append information for each row to the message content
+    rolesMessage += `${row.img_id} - ${row.boss_name}\n`;
+  });
+  return rolesMessage;
+}
+
 const lastClickedTimes = new Map();
 
 let dailyMessage;
@@ -379,6 +392,30 @@ client.once("ready", async () => {
     scheduledMessage.start();
   } catch (error) {
     console.error("An error occurred:", error);
+  }
+  if (process.env.DISCORD_ROLES_CHANNEL){
+    try {
+      roles = await fetchData("roles");
+      const rolesChannel = await client.channels.fetch(
+        process.env.DISCORD_ROLES_CHANNEL
+      );
+      const rolesPerMessage = 2;
+      for (let i = 0; i < roles.length; i += rolesPerMessage) {
+        const rolesBatch = roles.slice(i, i + rolesPerMessage);
+        const rolesMessage = buildRolesMessage(rolesBatch);
+        const message = await rolesChannel.send(rolesMessage);
+        for (const role of rolesBatch) {
+            try {
+                await message.react(role.img_id); // Use img_id as the emoji
+            } catch (error) {
+                console.error(`Failed to react with emoji ${role.img_id}:`, error);
+            }
+        }
+    }
+  
+    } catch (error) {
+      console.error("An error occurred:", error);
+    }
   }
 });
 
@@ -797,5 +834,52 @@ async function dailyScheduleFunctions(userId) {
   // This code will be executed at 12:00:00 PM every day
   connection.release();
 }
+
+client.on('messageReactionAdd', async (reaction, user) => {
+  // Check if the reaction is in the specific channel and if the user is not a bot
+  if (reaction.message.channel.id !== process.env.DISCORD_ROLES_CHANNEL || user.bot) return;
+
+  const guild = reaction.message.guild;
+  const member = guild.members.cache.get(user.id);
+
+  if (member) {
+    const reaction_id = `<:${reaction.emoji.name}:${reaction.emoji.id}>`;
+    const foundRole = roles.find(role => role.img_id === reaction_id);
+    if (!foundRole) return; 
+    const role = guild.roles.cache.get(foundRole.role_id);
+    if (role) {
+      try {
+        await member.roles.add(role);
+        console.log(`Added role to ${user.tag}`);
+      } catch (error) {
+        console.error(`Failed to add role: ${error}`);
+      }
+    }
+  }
+});
+
+// Listen for reaction removals
+client.on('messageReactionRemove', async (reaction, user) => {
+  // Check if the reaction is in the specific channel and if the user is not a bot
+  if (reaction.message.channel.id !== process.env.DISCORD_ROLES_CHANNEL || user.bot) return;
+
+  const guild = reaction.message.guild;
+  const member = guild.members.cache.get(user.id);
+
+  if (member) {
+    const reaction_id = `<:${reaction.emoji.name}:${reaction.emoji.id}>`;
+    const foundRole = roles.find(role => role.img_id === reaction_id);
+    if (!foundRole) return; 
+    const role = guild.roles.cache.get(foundRole.role_id);
+    if (role) {
+      try {
+        await member.roles.remove(role);
+        console.log(`Removed role from ${user.tag}`);
+      } catch (error) {
+        console.error(`Failed to remove role: ${error}`);
+      }
+    }
+  }
+});
 
 client.login(process.env.DISCORD_TOKEN);
