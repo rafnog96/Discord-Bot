@@ -5,6 +5,7 @@ import {
   ButtonBuilder,
   ButtonStyle,
   EmbedBuilder,
+  Partials
 } from "discord.js";
 import "dotenv/config";
 
@@ -24,6 +25,7 @@ const client = new Client({
     GatewayIntentBits.GuildMessageReactions,
     GatewayIntentBits.GuildMembers,
   ],
+    partials: [Partials.Message, Partials.Reaction, Partials.User],
 });
 
 import mysql from "mysql2/promise";
